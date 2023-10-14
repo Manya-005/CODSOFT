@@ -1,0 +1,74 @@
+import torch
+import torch.nn as nn
+from torchvision import models, transforms
+from PIL import Image
+import numpy as np
+
+# Load pre-trained ResNet model
+resnet = models.resnet50(pretrained=True)
+modules = list(resnet.children())[:-1]
+resnet = nn.Sequential(*modules)
+for param in resnet.parameters():
+    param.requires_grad = False  # Freeze ResNet layers
+
+# Define an LSTM-based captioning model
+class CaptioningModel(nn.Module):
+    def __init__(self, vocab_size, embed_size, hidden_size):
+        super(CaptioningModel, self).__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_size)
+        self.lstm = nn.LSTM(embed_size, hidden_size, batch_first=True)
+        self.fc = nn.Linear(hidden_size, vocab_size)
+    
+    def forward(self, features, captions):
+        captions = self.embedding(captions)
+        inputs = torch.cat((features.unsqueeze(1), captions), 1)
+        out, _ = self.lstm(inputs)
+        out = self.fc(out)
+        return out
+
+# Define image preprocessing
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+
+# Load an image and preprocess it
+def load_image(image_path):
+    image = Image.open(image_path)
+    image = transform(image).unsqueeze(0)
+    return image
+
+# Generate captions using the trained model
+def generate_caption(image_path, max_length=20):
+    image = load_image(image_path)
+    image_features = resnet(image)
+    image_features = image_features.view(1, -1)
+    
+    # Initialize the caption with the start token
+    caption = [vocab['<start>']]
+    
+    model.eval()
+    with torch.no_grad():
+        for _ in range(max_length):
+            caption_tensor = torch.LongTensor(caption).unsqueeze(0)
+            output = model(image_features, caption_tensor)
+            predicted_word_idx = output.argmax(2)[:, -1].item()
+            caption.append(predicted_word_idx)
+            if predicted_word_idx == vocab['<end>']:
+                break
+    
+    caption = [idx_to_word[idx] for idx in caption]
+    caption = ' '.join(caption[1:-1])  # Remove start and end tokens
+    return caption
+
+# Example usage
+if __name__ == '__main__':
+    # Load your vocabulary and mappings (vocab, idx_to_word) here
+    # Define your model parameters (vocab_size, embed_size, hidden_size)
+    # Load your trained model weights
+
+    # Load and generate captions for an image
+    image_path = 'path_to_your_image.jpg'
+    caption = generate_caption(image_path)
+    print(caption)
