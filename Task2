@@ -1,0 +1,107 @@
+# Initialize the Tic-Tac-Toe board
+board = [[' ' for _ in range(3)] for _ in range(3)]
+
+# Function to print the current board
+def print_board():
+    for row in board:
+        print(" | ".join(row))
+        print("---------")
+
+# Function to check if a move is valid
+def is_valid_move(row, col):
+    return 0 <= row < 3 and 0 <= col < 3 and board[row][col] == ' '
+
+# Function to check for a win or draw
+def check_win(player):
+    for row in board:
+        if all(cell == player for cell in row):
+            return True
+    for col in range(3):
+        if all(board[row][col] == player for row in range(3)):
+            return True
+    if all(board[i][i] == player for i in range(3)) or all(board[i][2 - i] == player for i in range(3)):
+        return True
+    return False
+
+# Function to evaluate the game state for the AI
+def evaluate():
+    if check_win('X'):
+        return 1  # AI wins
+    elif check_win('O'):
+        return -1  # Human wins
+    else:
+        return 0  # Draw
+
+# Minimax algorithm
+def minimax(depth, maximizing):
+    if depth == 0 or check_win('X') or check_win('O'):
+        return evaluate()
+
+    if maximizing:
+        max_eval = float('-inf')
+        for i in range(3):
+            for j in range(3):
+                if board[i][j] == ' ':
+                    board[i][j] = 'X'
+                    eval = minimax(depth - 1, False)
+                    board[i][j] = ' '
+                    max_eval = max(max_eval, eval)
+        return max_eval
+    else:
+        min_eval = float('inf')
+        for i in range(3):
+            for j in range(3):
+                if board[i][j] == ' ':
+                    board[i][j] = 'O'
+                    eval = minimax(depth - 1, True)
+                    board[i][j] = ' '
+                    min_eval = min(min_eval, eval)
+        return min_eval
+
+# Function to make the AI's move
+def make_ai_move():
+    best_move = None
+    best_eval = float('-inf')
+    for i in range(3):
+        for j in range(3):
+            if board[i][j] == ' ':
+                board[i][j] = 'X'
+                eval = minimax(2, False)  # You can adjust the depth for higher difficulty
+                board[i][j] = ' '
+                if eval > best_eval:
+                    best_eval = eval
+                    best_move = (i, j)
+    row, col = best_move
+    board[row][col] = 'X'
+
+# Main game loop
+current_player = 'O'
+while True:
+    print_board()
+    print(f"Player {current_player}'s turn")
+
+    if current_player == 'O':
+        row = int(input("Enter row (0, 1, or 2): "))
+        col = int(input("Enter column (0, 1, or 2): "))
+        if not is_valid_move(row, col):
+            print("Invalid move. Try again.")
+            continue
+    else:
+        make_ai_move()
+
+    if check_win(current_player):
+        print_board()
+        if current_player == 'O':
+            print("Human wins!")
+        else:
+            print("AI wins!")
+        break
+
+    # Check for a draw
+    if all(cell != ' ' for row in board for cell in row):
+        print_board()
+        print("It's a draw!")
+        break
+
+    # Switch players
+    current_player = 'X' if current_player == 'O' else 'O'
